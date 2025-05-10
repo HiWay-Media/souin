@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/darkweak/go-esi/esi"
 	"github.com/darkweak/souin/pkg/rfc"
 )
 
@@ -76,22 +77,24 @@ func (r *CustomWriter) WriteHeader(code int) {
 
 // Write will write the response body
 func (r *CustomWriter) Write(b []byte) (int, error) {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
-	r.Buf.Grow(len(b))
-	_, _ = r.Buf.Write(b)
+	r.handleBuffer(func(actual *bytes.Buffer) {
+		actual.Grow(len(b))
+		_, _ = actual.Write(b)
+	})
 
 	return len(b), nil
 }
 
 // Send delays the response to handle Cache-Status
 func (r *CustomWriter) Send() (int, error) {
-	defer r.Buf.Reset()
+	defer r.handleBuffer(func(b *bytes.Buffer) {
+		b.Reset()
+	})
 	storedLength := r.Header().Get(rfc.StoredLengthHeader)
 	if storedLength != "" {
 		r.Header().Set("Content-Length", storedLength)
 	}
-	b := r.Buf.Bytes()
+	b := esi.Parse(r.Buf.Bytes(), r.Req)
 	if len(b) != 0 {
 		r.Header().Set("Content-Length", strconv.Itoa(len(b)))
 	}

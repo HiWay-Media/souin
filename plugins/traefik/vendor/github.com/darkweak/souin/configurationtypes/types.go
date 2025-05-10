@@ -9,7 +9,8 @@ import (
 	"strings"
 	"time"
 
-	yaml "gopkg.in/yaml.v3"
+	"github.com/darkweak/storages/core"
+	"gopkg.in/yaml.v3"
 )
 
 type CacheKey map[RegValue]Key
@@ -456,6 +457,8 @@ type AbstractConfigurationInterface interface {
 	GetDefaultCache() DefaultCacheInterface
 	GetAPI() API
 	GetLogLevel() string
+	GetLogger() core.Logger
+	SetLogger(core.Logger)
 	GetYkeys() map[string]SurrogateKeys
 	GetSurrogateKeys() map[string]SurrogateKeys
 	GetCacheKeys() CacheKeys

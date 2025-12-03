@@ -2,23 +2,28 @@ package provisioner
 
 import (
 	"context"
+	"crypto/ecdh"
+	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/elliptic"
 	"crypto/x509"
 	"encoding/base64"
+	"math/big"
 	"net"
 	"time"
 
 	"github.com/pkg/errors"
 	nebula "github.com/slackhq/nebula/cert"
+	"golang.org/x/crypto/ssh"
 
+	"github.com/smallstep/linkedca"
 	"go.step.sm/crypto/jose"
 	"go.step.sm/crypto/sshutil"
 	"go.step.sm/crypto/x25519"
 	"go.step.sm/crypto/x509util"
-	"go.step.sm/linkedca"
-	"golang.org/x/crypto/ssh"
 
 	"github.com/smallstep/certificates/errs"
+	"github.com/smallstep/certificates/internal/cast"
 )
 
 const (
@@ -58,9 +63,13 @@ func (p *Nebula) Init(config Config) (err error) {
 		return errors.New("provisioner root(s) cannot be empty")
 	}
 
-	p.caPool, err = nebula.NewCAPoolFromBytes(p.Roots)
+	var certErrors []error
+	p.caPool, certErrors, err = nebula.NewCAPoolFromBytes(p.Roots)
 	if err != nil {
-		return errs.InternalServer("failed to create ca pool: %v", err)
+		return errs.InternalServer("failed to create CA pool: %v", err)
+	}
+	if len(certErrors) > 0 {
+		return errs.InternalServer("failed to create CA pool: %v", certErrors)
 	}
 
 	config.Audiences = config.Audiences.WithFragment(p.GetIDForToken())
@@ -229,10 +238,10 @@ func (p *Nebula) AuthorizeSSHSign(_ context.Context, token string) ([]SignOption
 		// Add modifiers from custom claims
 		t := now()
 		if !opts.ValidAfter.IsZero() {
-			signOptions = append(signOptions, sshCertValidAfterModifier(opts.ValidAfter.RelativeTime(t).Unix()))
+			signOptions = append(signOptions, sshCertValidAfterModifier(cast.Uint64(opts.ValidAfter.RelativeTime(t).Unix())))
 		}
 		if !opts.ValidBefore.IsZero() {
-			signOptions = append(signOptions, sshCertValidBeforeModifier(opts.ValidBefore.RelativeTime(t).Unix()))
+			signOptions = append(signOptions, sshCertValidBeforeModifier(cast.Uint64(opts.ValidBefore.RelativeTime(t).Unix())))
 		}
 	}
 
@@ -274,20 +283,14 @@ func (p *Nebula) AuthorizeRenew(ctx context.Context, crt *x509.Certificate) erro
 	return p.ctl.AuthorizeRenew(ctx, crt)
 }
 
-// AuthorizeRevoke returns an error if the token is not valid.
-func (p *Nebula) AuthorizeRevoke(_ context.Context, token string) error {
-	return p.validateToken(token, p.ctl.Audiences.Revoke)
+// AuthorizeRevoke returns an unauthorized error.
+func (p *Nebula) AuthorizeRevoke(context.Context, string) error {
+	return errs.Unauthorized("nebula provisioner does not support revoke")
 }
 
-// AuthorizeSSHRevoke returns an error if SSH is disabled or the token is invalid.
-func (p *Nebula) AuthorizeSSHRevoke(_ context.Context, token string) error {
-	if !p.ctl.Claimer.IsSSHCAEnabled() {
-		return errs.Unauthorized("ssh is disabled for nebula provisioner '%s'", p.Name)
-	}
-	if _, _, err := p.authorizeToken(token, p.ctl.Audiences.SSHRevoke); err != nil {
-		return err
-	}
-	return nil
+// AuthorizeSSHRevoke returns an unauthorized error.
+func (p *Nebula) AuthorizeSSHRevoke(context.Context, string) error {
+	return errs.Unauthorized("nebula provisioner does not support SSH revoke")
 }
 
 // AuthorizeSSHRenew returns an unauthorized error.
@@ -298,11 +301,6 @@ func (p *Nebula) AuthorizeSSHRenew(context.Context, string) (*ssh.Certificate, e
 // AuthorizeSSHRekey returns an unauthorized error.
 func (p *Nebula) AuthorizeSSHRekey(context.Context, string) (*ssh.Certificate, []SignOption, error) {
 	return nil, nil, errs.Unauthorized("nebula provisioner does not support SSH rekey")
-}
-
-func (p *Nebula) validateToken(token string, audiences []string) error {
-	_, _, err := p.authorizeToken(token, audiences)
-	return err
 }
 
 func (p *Nebula) authorizeToken(token string, audiences []string) (*nebula.NebulaCertificate, *jwtPayload, error) {
@@ -337,10 +335,23 @@ func (p *Nebula) authorizeToken(token string, audiences []string) (*nebula.Nebul
 		return nil, nil, errs.Unauthorized("token is not valid: failed to verify certificate against configured CA")
 	}
 
-	var pub interface{}
-	if c.Details.IsCA {
+	var pub any
+	switch {
+	case c.Details.Curve == nebula.Curve_P256:
+		// When Nebula is used with ECDSA P-256 keys, both CAs and clients use the same type.
+		ecdhPub, err := ecdh.P256().NewPublicKey(c.Details.PublicKey)
+		if err != nil {
+			return nil, nil, errs.UnauthorizedErr(err, errs.WithMessage("failed to parse nebula public key"))
+		}
+		publicKeyBytes := ecdhPub.Bytes()
+		pub = &ecdsa.PublicKey{ // convert back to *ecdsa.PublicKey, because our jose package nor go-jose supports *ecdh.PublicKey
+			Curve: elliptic.P256(),
+			X:     big.NewInt(0).SetBytes(publicKeyBytes[1:33]),
+			Y:     big.NewInt(0).SetBytes(publicKeyBytes[33:]),
+		}
+	case c.Details.IsCA:
 		pub = ed25519.PublicKey(c.Details.PublicKey)
-	} else {
+	default:
 		pub = x25519.PublicKey(c.Details.PublicKey)
 	}
 
@@ -358,6 +369,7 @@ func (p *Nebula) authorizeToken(token string, audiences []string) (*nebula.Nebul
 	}, time.Minute); err != nil {
 		return nil, nil, errs.UnauthorizedErr(err, errs.WithMessage("token is not valid: invalid claims"))
 	}
+
 	// Validate token and subject too.
 	if !matchesAudience(claims.Audience, audiences) {
 		return nil, nil, errs.Unauthorized("token is not valid: invalid claims")

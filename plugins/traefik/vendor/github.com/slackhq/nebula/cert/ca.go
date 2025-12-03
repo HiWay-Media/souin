@@ -24,31 +24,39 @@ func NewCAPool() *NebulaCAPool {
 
 // NewCAPoolFromBytes will create a new CA pool from the provided
 // input bytes, which must be a PEM-encoded set of nebula certificates.
+// If the pool contains unsupported certificates, they will generate warnings
+// in the []error return arg.
 // If the pool contains any expired certificates, an ErrExpired will be
 // returned along with the pool. The caller must handle any such errors.
-func NewCAPoolFromBytes(caPEMs []byte) (*NebulaCAPool, error) {
+func NewCAPoolFromBytes(caPEMs []byte) (*NebulaCAPool, []error, error) {
 	pool := NewCAPool()
 	var err error
-	var expired bool
+	var warnings []error
+	good := 0
+
 	for {
 		caPEMs, err = pool.AddCACertificate(caPEMs)
 		if errors.Is(err, ErrExpired) {
-			expired = true
-			err = nil
+			warnings = append(warnings, err)
+		} else if errors.Is(err, ErrInvalidPEMCertificateUnsupported) {
+			warnings = append(warnings, err)
+		} else if err != nil {
+			return nil, warnings, err
+		} else {
+			// Only consider a good certificate if there were no errors present
+			good++
 		}
-		if err != nil {
-			return nil, err
-		}
+
 		if len(caPEMs) == 0 || strings.TrimSpace(string(caPEMs)) == "" {
 			break
 		}
 	}
 
-	if expired {
-		return pool, ErrExpired
+	if good == 0 {
+		return nil, warnings, errors.New("no valid CA certificates present")
 	}
 
-	return pool, nil
+	return pool, warnings, nil
 }
 
 // AddCACertificate verifies a Nebula CA certificate and adds it to the pool
@@ -91,9 +99,15 @@ func (ncp *NebulaCAPool) ResetCertBlocklist() {
 	ncp.certBlocklist = make(map[string]struct{})
 }
 
-// IsBlocklisted returns true if the fingerprint fails to generate or has been explicitly blocklisted
+// NOTE: This uses an internal cache for Sha256Sum() that will not be invalidated
+// automatically if you manually change any fields in the NebulaCertificate.
 func (ncp *NebulaCAPool) IsBlocklisted(c *NebulaCertificate) bool {
-	h, err := c.Sha256Sum()
+	return ncp.isBlocklistedWithCache(c, false)
+}
+
+// IsBlocklisted returns true if the fingerprint fails to generate or has been explicitly blocklisted
+func (ncp *NebulaCAPool) isBlocklistedWithCache(c *NebulaCertificate, useCache bool) bool {
+	h, err := c.sha256SumWithCache(useCache)
 	if err != nil {
 		return true
 	}

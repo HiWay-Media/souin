@@ -1,6 +1,6 @@
 module github.com/darkweak/souin/plugins/skipper
 
-go 1.22.1
+go 1.23.0
 
 require (
 	github.com/darkweak/souin v1.7.6
@@ -16,7 +16,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.0 // indirect
 	github.com/Masterminds/sprig/v3 v3.2.3 // indirect
 	github.com/MicahParks/keyfunc v1.9.0 // indirect
-	github.com/Microsoft/go-winio v0.6.1 // indirect
+	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/OneOfOne/xxhash v1.2.8 // indirect
 	github.com/RoaringBitmap/roaring v1.2.3 // indirect
 	github.com/abbot/go-http-auth v0.4.0 // indirect
@@ -41,7 +41,7 @@ require (
 	github.com/chzyer/readline v1.5.1 // indirect
 	github.com/cjoudrey/gluahttp v0.0.0-20201111170219-25003d9adfa9 // indirect
 	github.com/cjoudrey/gluaurl v0.0.0-20161028222611-31cbb9bef199 // indirect
-	github.com/containerd/containerd v1.7.3 // indirect
+	github.com/containerd/containerd v1.7.29 // indirect
 	github.com/coreos/go-oidc v2.2.1+incompatible // indirect
 	github.com/coreos/go-semver v0.3.1 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
@@ -69,7 +69,7 @@ require (
 	github.com/dolthub/maphash v0.1.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/gammazero/deque v0.2.1 // indirect
-	github.com/go-jose/go-jose/v3 v3.0.3 // indirect
+	github.com/go-jose/go-jose/v3 v3.0.4 // indirect
 	github.com/go-kit/kit v0.13.0 // indirect
 	github.com/go-kit/log v0.2.1 // indirect
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
@@ -132,7 +132,7 @@ require (
 	github.com/nutsdb/nutsdb v1.0.4 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/onsi/ginkgo/v2 v2.15.0 // indirect
-	github.com/opencontainers/image-spec v1.1.0-rc4 // indirect
+	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/opentracing/basictracer-go v1.1.0 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
@@ -182,7 +182,7 @@ require (
 	github.com/yookoala/gofast v0.7.0 // indirect
 	github.com/yuin/gopher-lua v1.1.0 // indirect
 	github.com/zeebo/blake3 v0.2.3 // indirect
-	go.etcd.io/bbolt v1.3.9 // indirect
+	go.etcd.io/bbolt v1.3.10 // indirect
 	go.etcd.io/etcd/api/v3 v3.5.18 // indirect
 	go.etcd.io/etcd/client/pkg/v3 v3.5.18 // indirect
 	go.etcd.io/etcd/client/v3 v3.5.18 // indirect
@@ -197,18 +197,18 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	go.uber.org/zap/exp v0.2.0 // indirect
 	go4.org/netipx v0.0.0-20230303233057-f1b76eb4bb35 // indirect
-	golang.org/x/crypto v0.32.0 // indirect
+	golang.org/x/crypto v0.40.0 // indirect
 	golang.org/x/crypto/x509roots/fallback v0.0.0-20240507223354-67b13616a595 // indirect
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842 // indirect
-	golang.org/x/mod v0.22.0 // indirect
-	golang.org/x/net v0.34.0 // indirect
-	golang.org/x/oauth2 v0.24.0 // indirect
-	golang.org/x/sync v0.10.0 // indirect
-	golang.org/x/sys v0.29.0 // indirect
-	golang.org/x/term v0.28.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
-	golang.org/x/time v0.5.0 // indirect
-	golang.org/x/tools v0.29.0 // indirect
+	golang.org/x/mod v0.26.0 // indirect
+	golang.org/x/net v0.42.0 // indirect
+	golang.org/x/oauth2 v0.30.0 // indirect
+	golang.org/x/sync v0.16.0 // indirect
+	golang.org/x/sys v0.34.0 // indirect
+	golang.org/x/term v0.33.0 // indirect
+	golang.org/x/text v0.27.0 // indirect
+	golang.org/x/time v0.12.0 // indirect
+	golang.org/x/tools v0.34.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20241202173237-19429a94021a // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241202173237-19429a94021a // indirect
 	google.golang.org/grpc v1.70.0 // indirect
